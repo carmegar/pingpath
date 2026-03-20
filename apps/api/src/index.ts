@@ -15,7 +15,7 @@ await app.register(cors, { origin: true })
 await app.register(websocket)
 
 // Initialize database
-initDatabase()
+await initDatabase()
 
 // WebSocket endpoint
 app.get('/ws', { websocket: true }, (socket) => {

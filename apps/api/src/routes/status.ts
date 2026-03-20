@@ -2,67 +2,57 @@ import { FastifyInstance } from 'fastify'
 import { getDb } from '../db/schema.js'
 
 export async function statusRoutes(app: FastifyInstance) {
-  // Public status page data
-  app.get('/status', async () => {
-    const db = getDb()
+  const db = getDb()
 
-    const monitors = db.prepare(`
+  app.get('/status', async () => {
+    const monitorsResult = await db.execute(`
       SELECT m.id, m.name, m.url,
         (SELECT status FROM checks WHERE monitor_id = m.id ORDER BY checked_at DESC LIMIT 1) as current_status,
         (SELECT latency_ms FROM checks WHERE monitor_id = m.id ORDER BY checked_at DESC LIMIT 1) as last_latency,
         (SELECT ROUND(SUM(CASE WHEN status = 'up' THEN 1.0 ELSE 0.0 END) / COUNT(*) * 100, 2)
          FROM checks WHERE monitor_id = m.id AND checked_at > datetime('now', '-30 days')) as uptime_30d
-      FROM monitors m
-      WHERE m.is_public = 1 AND m.is_active = 1
-      ORDER BY m.name ASC
-    `).all()
+      FROM monitors m WHERE m.is_public = 1 AND m.is_active = 1 ORDER BY m.name ASC
+    `)
 
-    // Get daily availability per public monitor (last 30 days)
-    const monitorsWithDaily = monitors.map((m: any) => {
-      const daily = db.prepare(`
-        SELECT
-          date(checked_at) as day,
-          ROUND(SUM(CASE WHEN status = 'up' THEN 1.0 ELSE 0.0 END) / COUNT(*) * 100, 2) as uptime
-        FROM checks
-        WHERE monitor_id = ? AND checked_at > datetime('now', '-30 days')
-        GROUP BY date(checked_at)
-        ORDER BY day ASC
-      `).all(m.id)
-      return { ...m, daily }
-    })
+    const monitors = await Promise.all(
+      monitorsResult.rows.map(async (m: any) => {
+        const daily = await db.execute({
+          sql: `SELECT date(checked_at) as day,
+            ROUND(SUM(CASE WHEN status = 'up' THEN 1.0 ELSE 0.0 END) / COUNT(*) * 100, 2) as uptime
+          FROM checks WHERE monitor_id = ? AND checked_at > datetime('now', '-30 days')
+          GROUP BY date(checked_at) ORDER BY day ASC`,
+          args: [m.id]
+        })
+        return { ...m, daily: daily.rows }
+      })
+    )
 
-    // Recent incidents
-    const incidents = db.prepare(`
-      SELECT i.*, m.name as monitor_name
-      FROM incidents i
+    const incidents = await db.execute(`
+      SELECT i.*, m.name as monitor_name FROM incidents i
       JOIN monitors m ON m.id = i.monitor_id
-      WHERE m.is_public = 1
-      ORDER BY i.started_at DESC
-      LIMIT 20
-    `).all()
+      WHERE m.is_public = 1 ORDER BY i.started_at DESC LIMIT 20
+    `)
 
-    // Overall status
-    const hasDown = monitors.some((m: any) => m.current_status === 'down')
-    const hasDegraded = monitors.some((m: any) => m.current_status === 'degraded')
+    const hasDown = monitorsResult.rows.some((m: any) => m.current_status === 'down')
+    const hasDegraded = monitorsResult.rows.some((m: any) => m.current_status === 'degraded')
     const overall = hasDown ? 'major_outage' : hasDegraded ? 'partial_outage' : 'operational'
 
-    return { overall, monitors: monitorsWithDaily, incidents }
+    return { overall, monitors, incidents: incidents.rows }
   })
 
-  // SVG Badge
   app.get('/status/badge/:id', async (req, reply) => {
     const { id } = req.params as { id: string }
-    const db = getDb()
-
-    const monitor = db.prepare(`
-      SELECT m.name,
+    const result = await db.execute({
+      sql: `SELECT m.name,
         (SELECT status FROM checks WHERE monitor_id = m.id ORDER BY checked_at DESC LIMIT 1) as current_status,
         (SELECT ROUND(SUM(CASE WHEN status = 'up' THEN 1.0 ELSE 0.0 END) / COUNT(*) * 100, 1)
          FROM checks WHERE monitor_id = m.id AND checked_at > datetime('now', '-30 days')) as uptime
-      FROM monitors m WHERE m.id = ? AND m.is_public = 1
-    `).get(id) as any
+      FROM monitors m WHERE m.id = ? AND m.is_public = 1`,
+      args: [id]
+    })
 
-    if (!monitor) return reply.status(404).send({ error: 'Monitor not found' })
+    if (result.rows.length === 0) return reply.status(404).send({ error: 'Monitor not found' })
+    const monitor = result.rows[0] as any
 
     const isUp = monitor.current_status === 'up'
     const color = isUp ? '#22c55e' : '#ef4444'

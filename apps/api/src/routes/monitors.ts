@@ -14,10 +14,10 @@ interface MonitorBody {
 }
 
 export async function monitorRoutes(app: FastifyInstance) {
-  // List all monitors
-  app.get('/monitors', async (req, reply) => {
-    const db = getDb()
-    const monitors = db.prepare(`
+  const db = getDb()
+
+  app.get('/monitors', async () => {
+    const result = await db.execute(`
       SELECT m.*,
         (SELECT status FROM checks WHERE monitor_id = m.id ORDER BY checked_at DESC LIMIT 1) as current_status,
         (SELECT latency_ms FROM checks WHERE monitor_id = m.id ORDER BY checked_at DESC LIMIT 1) as last_latency,
@@ -25,66 +25,49 @@ export async function monitorRoutes(app: FastifyInstance) {
           NULLIF((SELECT COUNT(*) FROM checks WHERE monitor_id = m.id AND checked_at > datetime('now', '-24 hours')), 0) as uptime_24h
       FROM monitors m
       ORDER BY m.created_at DESC
-    `).all()
-    return monitors
+    `)
+    return result.rows
   })
 
-  // Create monitor
   app.post('/monitors', async (req, reply) => {
     const body = req.body as MonitorBody
     if (!body.name || !body.url) {
       return reply.status(400).send({ error: 'name and url are required' })
     }
 
-    const db = getDb()
     const id = nanoid(12)
-    const stmt = db.prepare(`
-      INSERT INTO monitors (id, name, url, method, interval_seconds, expected_status, timeout_ms, is_public, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `)
+    await db.execute({
+      sql: `INSERT INTO monitors (id, name, url, method, interval_seconds, expected_status, timeout_ms, is_public, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [id, body.name, body.url, body.method || 'GET', body.interval_seconds || 60, body.expected_status || 200, body.timeout_ms || 5000, body.is_public ? 1 : 0, body.is_active !== false ? 1 : 0]
+    })
 
-    stmt.run(
-      id,
-      body.name,
-      body.url,
-      body.method || 'GET',
-      body.interval_seconds || 60,
-      body.expected_status || 200,
-      body.timeout_ms || 5000,
-      body.is_public ? 1 : 0,
-      body.is_active !== false ? 1 : 0
-    )
-
-    const monitor = db.prepare('SELECT * FROM monitors WHERE id = ?').get(id)
-    return reply.status(201).send(monitor)
+    const result = await db.execute({ sql: 'SELECT * FROM monitors WHERE id = ?', args: [id] })
+    return reply.status(201).send(result.rows[0])
   })
 
-  // Get single monitor
   app.get('/monitors/:id', async (req, reply) => {
     const { id } = req.params as { id: string }
-    const db = getDb()
-    const monitor = db.prepare(`
-      SELECT m.*,
+    const result = await db.execute({
+      sql: `SELECT m.*,
         (SELECT status FROM checks WHERE monitor_id = m.id ORDER BY checked_at DESC LIMIT 1) as current_status,
         (SELECT latency_ms FROM checks WHERE monitor_id = m.id ORDER BY checked_at DESC LIMIT 1) as last_latency
-      FROM monitors m WHERE m.id = ?
-    `).get(id)
-
-    if (!monitor) return reply.status(404).send({ error: 'Monitor not found' })
-    return monitor
+      FROM monitors m WHERE m.id = ?`,
+      args: [id]
+    })
+    if (result.rows.length === 0) return reply.status(404).send({ error: 'Monitor not found' })
+    return result.rows[0]
   })
 
-  // Update monitor
   app.put('/monitors/:id', async (req, reply) => {
     const { id } = req.params as { id: string }
     const body = req.body as Partial<MonitorBody>
-    const db = getDb()
 
-    const existing = db.prepare('SELECT * FROM monitors WHERE id = ?').get(id)
-    if (!existing) return reply.status(404).send({ error: 'Monitor not found' })
+    const existing = await db.execute({ sql: 'SELECT * FROM monitors WHERE id = ?', args: [id] })
+    if (existing.rows.length === 0) return reply.status(404).send({ error: 'Monitor not found' })
 
     const fields: string[] = []
-    const values: unknown[] = []
+    const values: (string | number)[] = []
 
     if (body.name !== undefined) { fields.push('name = ?'); values.push(body.name) }
     if (body.url !== undefined) { fields.push('url = ?'); values.push(body.url) }
@@ -98,70 +81,55 @@ export async function monitorRoutes(app: FastifyInstance) {
     if (fields.length > 0) {
       fields.push("updated_at = datetime('now')")
       values.push(id)
-      db.prepare(`UPDATE monitors SET ${fields.join(', ')} WHERE id = ?`).run(...values)
+      await db.execute({ sql: `UPDATE monitors SET ${fields.join(', ')} WHERE id = ?`, args: values })
     }
 
-    const updated = db.prepare('SELECT * FROM monitors WHERE id = ?').get(id)
-    return updated
+    const updated = await db.execute({ sql: 'SELECT * FROM monitors WHERE id = ?', args: [id] })
+    return updated.rows[0]
   })
 
-  // Delete monitor
   app.delete('/monitors/:id', async (req, reply) => {
     const { id } = req.params as { id: string }
-    const db = getDb()
-    const result = db.prepare('DELETE FROM monitors WHERE id = ?').run(id)
-    if (result.changes === 0) return reply.status(404).send({ error: 'Monitor not found' })
+    const result = await db.execute({ sql: 'DELETE FROM monitors WHERE id = ?', args: [id] })
+    if (result.rowsAffected === 0) return reply.status(404).send({ error: 'Monitor not found' })
     return { success: true }
   })
 
-  // Get checks for a monitor
-  app.get('/monitors/:id/checks', async (req, reply) => {
+  app.get('/monitors/:id/checks', async (req) => {
     const { id } = req.params as { id: string }
     const query = req.query as { limit?: string; period?: string }
     const limit = Math.min(Number(query.limit) || 100, 1000)
-    const db = getDb()
 
     let timeFilter = ''
+    const args: (string | number)[] = [id]
+
     if (query.period) {
-      const periods: Record<string, string> = {
-        '1h': '-1 hours',
-        '6h': '-6 hours',
-        '24h': '-24 hours',
-        '7d': '-7 days',
-        '30d': '-30 days',
-      }
+      const periods: Record<string, string> = { '1h': '-1 hours', '6h': '-6 hours', '24h': '-24 hours', '7d': '-7 days', '30d': '-30 days' }
       const offset = periods[query.period]
-      if (offset) timeFilter = `AND checked_at > datetime('now', '${offset}')`
+      if (offset) {
+        timeFilter = `AND checked_at > datetime('now', ?)`
+        args.push(offset)
+      }
     }
+    args.push(limit)
 
-    const checks = db.prepare(`
-      SELECT * FROM checks
-      WHERE monitor_id = ? ${timeFilter}
-      ORDER BY checked_at DESC
-      LIMIT ?
-    `).all(id, limit)
-
-    return checks
+    const result = await db.execute({
+      sql: `SELECT * FROM checks WHERE monitor_id = ? ${timeFilter} ORDER BY checked_at DESC LIMIT ?`,
+      args
+    })
+    return result.rows
   })
 
-  // Get stats for a monitor
-  app.get('/monitors/:id/stats', async (req, reply) => {
+  app.get('/monitors/:id/stats', async (req) => {
     const { id } = req.params as { id: string }
     const query = req.query as { period?: string }
-    const db = getDb()
 
     const period = query.period || '24h'
-    const periods: Record<string, string> = {
-      '1h': '-1 hours',
-      '6h': '-6 hours',
-      '24h': '-24 hours',
-      '7d': '-7 days',
-      '30d': '-30 days',
-    }
+    const periods: Record<string, string> = { '1h': '-1 hours', '6h': '-6 hours', '24h': '-24 hours', '7d': '-7 days', '30d': '-30 days' }
     const offset = periods[period] || '-24 hours'
 
-    const stats = db.prepare(`
-      SELECT
+    const stats = await db.execute({
+      sql: `SELECT
         COUNT(*) as total_checks,
         SUM(CASE WHEN status = 'up' THEN 1 ELSE 0 END) as up_checks,
         ROUND(SUM(CASE WHEN status = 'up' THEN 1.0 ELSE 0.0 END) / COUNT(*) * 100, 2) as uptime_percentage,
@@ -169,21 +137,18 @@ export async function monitorRoutes(app: FastifyInstance) {
         MIN(latency_ms) as min_latency,
         MAX(latency_ms) as max_latency,
         SUM(CASE WHEN status = 'down' THEN 1 ELSE 0 END) as down_count
-      FROM checks
-      WHERE monitor_id = ? AND checked_at > datetime('now', ?)
-    `).get(id, offset)
+      FROM checks WHERE monitor_id = ? AND checked_at > datetime('now', ?)`,
+      args: [id, offset]
+    })
 
-    // Daily availability for the bar chart (last 30 days)
-    const daily = db.prepare(`
-      SELECT
-        date(checked_at) as day,
+    const daily = await db.execute({
+      sql: `SELECT date(checked_at) as day,
         ROUND(SUM(CASE WHEN status = 'up' THEN 1.0 ELSE 0.0 END) / COUNT(*) * 100, 2) as uptime
-      FROM checks
-      WHERE monitor_id = ? AND checked_at > datetime('now', '-30 days')
-      GROUP BY date(checked_at)
-      ORDER BY day ASC
-    `).all(id)
+      FROM checks WHERE monitor_id = ? AND checked_at > datetime('now', '-30 days')
+      GROUP BY date(checked_at) ORDER BY day ASC`,
+      args: [id]
+    })
 
-    return { ...(stats as Record<string, unknown>), daily }
+    return { ...(stats.rows[0] as Record<string, unknown>), daily: daily.rows }
   })
 }

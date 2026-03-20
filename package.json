@@ -6,7 +6,7 @@
   "scripts": {
     "dev:api": "pnpm --filter @pingpath/api dev",
     "dev:web": "pnpm --filter @pingpath/web dev",
-    "dev": "pnpm run --parallel dev:api dev:web",
+    "dev": "pnpm --filter @pingpath/api dev & pnpm --filter @pingpath/web dev",
     "build:api": "pnpm --filter @pingpath/api build",
     "build:web": "pnpm --filter @pingpath/web build",
     "build": "pnpm run build:api && pnpm run build:web"

@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3'
+import { createClient, type Client } from '@libsql/client'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -6,23 +6,21 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../../data/pingpath.db')
 
-let db: Database.Database
+let client: Client
 
-export function getDb(): Database.Database {
-  if (!db) {
+export function getDb(): Client {
+  if (!client) {
     const dir = path.dirname(DB_PATH)
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-    db = new Database(DB_PATH)
-    db.pragma('journal_mode = WAL')
-    db.pragma('foreign_keys = ON')
+    client = createClient({ url: `file:${DB_PATH}` })
   }
-  return db
+  return client
 }
 
-export function initDatabase(): void {
+export async function initDatabase(): Promise<void> {
   const db = getDb()
 
-  db.exec(`
+  await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS monitors (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -75,5 +73,7 @@ export function initDatabase(): void {
       channel_id TEXT NOT NULL REFERENCES notification_channels(id) ON DELETE CASCADE,
       PRIMARY KEY (monitor_id, channel_id)
     );
+
+    PRAGMA foreign_keys = ON;
   `)
 }
