@@ -1,0 +1,19 @@
+{
+  "name": "pingpath",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Uptime monitor & status page - CubePath Hackathon 2026",
+  "scripts": {
+    "dev:api": "pnpm --filter @pingpath/api dev",
+    "dev:web": "pnpm --filter @pingpath/web dev",
+    "dev": "pnpm run --parallel dev:api dev:web",
+    "build:api": "pnpm --filter @pingpath/api build",
+    "build:web": "pnpm --filter @pingpath/web build",
+    "build": "pnpm run build:api && pnpm run build:web"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/carmegar/pingpath"
+  },
+  "license": "MIT"
+}

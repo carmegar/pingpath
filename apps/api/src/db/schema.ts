@@ -1,0 +1,79 @@
+import Database from 'better-sqlite3'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../../data/pingpath.db')
+
+let db: Database.Database
+
+export function getDb(): Database.Database {
+  if (!db) {
+    const dir = path.dirname(DB_PATH)
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    db = new Database(DB_PATH)
+    db.pragma('journal_mode = WAL')
+    db.pragma('foreign_keys = ON')
+  }
+  return db
+}
+
+export function initDatabase(): void {
+  const db = getDb()
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS monitors (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      method TEXT NOT NULL DEFAULT 'GET',
+      interval_seconds INTEGER NOT NULL DEFAULT 60,
+      expected_status INTEGER NOT NULL DEFAULT 200,
+      timeout_ms INTEGER NOT NULL DEFAULT 5000,
+      is_public INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS checks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      monitor_id TEXT NOT NULL REFERENCES monitors(id) ON DELETE CASCADE,
+      status TEXT NOT NULL CHECK (status IN ('up', 'down', 'degraded')),
+      status_code INTEGER,
+      latency_ms INTEGER NOT NULL,
+      error_message TEXT,
+      checked_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_checks_monitor_id ON checks(monitor_id);
+    CREATE INDEX IF NOT EXISTS idx_checks_checked_at ON checks(checked_at);
+    CREATE INDEX IF NOT EXISTS idx_checks_monitor_checked ON checks(monitor_id, checked_at DESC);
+
+    CREATE TABLE IF NOT EXISTS incidents (
+      id TEXT PRIMARY KEY,
+      monitor_id TEXT NOT NULL REFERENCES monitors(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK (type IN ('down', 'degraded', 'recovery')),
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      resolved_at TEXT,
+      duration_seconds INTEGER
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_incidents_monitor_id ON incidents(monitor_id);
+
+    CREATE TABLE IF NOT EXISTS notification_channels (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL CHECK (type IN ('discord', 'telegram')),
+      config TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS monitor_notifications (
+      monitor_id TEXT NOT NULL REFERENCES monitors(id) ON DELETE CASCADE,
+      channel_id TEXT NOT NULL REFERENCES notification_channels(id) ON DELETE CASCADE,
+      PRIMARY KEY (monitor_id, channel_id)
+    );
+  `)
+}
