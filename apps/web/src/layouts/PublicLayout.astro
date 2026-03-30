@@ -19,6 +19,14 @@ const { title } = Astro.props
   </head>
   <body class="min-h-screen bg-bg text-text-primary">
     <slot />
+    <script is:inline>
+      const saved = localStorage.getItem('theme')
+      const html = document.documentElement
+      if (saved === 'light') {
+        html.classList.remove('dark')
+        html.classList.add('light')
+      }
+    </script>
   </body>
 </html>
 
