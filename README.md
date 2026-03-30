@@ -4,20 +4,40 @@
 
 Built for the [CubePath Hackathon 2026](https://github.com/midudev/hackaton-cubepath-2026) by [@carmegar](https://github.com/carmegar).
 
-## Demo
+## Live Demo
 
-> **Live demo:** *(Coming soon - deployed on CubePath)*
+> **Live:** [http://45.90.237.206](http://45.90.237.206)
+> **Status Page:** [http://45.90.237.206/status](http://45.90.237.206/status)
+> **Dashboard:** [http://45.90.237.206/app](http://45.90.237.206/app)
+
+## Screenshots
+
+### Landing Page
+![Landing](screenshots/landing_1.png)
+![Landing Features](screenshots/landing_2.png)
+
+### Dashboard
+![Dashboard](screenshots/Dashboard.png)
+
+### Monitor Detail
+![Monitor Detail](screenshots/detail_monitor.png)
+
+### Status Page
+![Status Page Dark](screenshots/status_dark.png)
+![Status Page Light](screenshots/status_light.png)
 
 ## Features
 
 - **Real-time monitoring** - HTTP/HTTPS health checks every 60 seconds
 - **Interactive dashboard** - Latency charts, uptime percentages, sparkline graphs
-- **Public status page** - Share service status with your users
+- **Public status page** - 90-day uptime bars, incident timeline, light/dark theme
+- **AI incident summaries** - Automatic post-incident analysis via Ollama (Qwen2 0.5B)
 - **Incident tracking** - Automatic detection of outages and recoveries
 - **Notifications** - Alerts via Discord webhooks and Telegram bots
+- **Demo services** - 3 mock microservices with chaos engine for live demos
 - **Embeddable badges** - SVG status badges for your README
 - **WebSocket updates** - Dashboard refreshes in real-time without polling
-- **Dark theme** - Modern, clean UI designed for developers
+- **Dark/Light theme** - Modern, clean UI with theme toggle
 
 ## Tech Stack
 
@@ -26,10 +46,24 @@ Built for the [CubePath Hackathon 2026](https://github.com/midudev/hackaton-cube
 | Frontend | Astro + React + Tailwind CSS v4 |
 | Charts | Recharts |
 | Backend | Node.js + Fastify + TypeScript |
-| Database | SQLite (better-sqlite3) |
+| Database | SQLite (@libsql/client) |
 | Real-time | WebSockets (@fastify/websocket) |
+| AI | Ollama + Qwen2 0.5B |
 | Cron | node-cron |
-| Deploy | CubePath VPS |
+| Deploy | **CubePath VPS** (2x VPS Nano) |
+
+## How CubePath is Used
+
+PingPath runs on **2 CubePath VPS Nano instances**:
+
+| VPS | Role | Details |
+|-----|------|---------|
+| **VPS 1** (45.90.237.206) | PingPath App | API + Frontend + Nginx + Ollama |
+| **VPS 2** (45.90.237.207) | Demo Services | 3 mock microservices + chaos engine |
+
+The main VPS hosts the Fastify API and Astro frontend behind Nginx. It runs cron jobs every 60 seconds that check the health of monitored endpoints and stores results in SQLite. WebSocket connections stream real-time updates to connected dashboards. The second VPS runs demo services with a chaos engine that randomly degrades or takes down services every 10-20 minutes, showcasing PingPath's monitoring capabilities in action.
+
+This architecture requires persistent servers running 24/7 — exactly what CubePath VPS provides.
 
 ## Getting Started
 
@@ -70,10 +104,6 @@ pnpm dev:web   # Frontend on http://localhost:3000
 pnpm build
 ```
 
-## How CubePath is Used
-
-PingPath runs entirely on a CubePath VPS. The server hosts both the Fastify API backend and the Astro static frontend. The VPS runs 24/7 executing cron jobs that perform health checks every 60 seconds against monitored endpoints, storing results in a local SQLite database. WebSocket connections stream real-time updates to connected dashboards. This architecture requires a persistent server - something only possible with a VPS like CubePath.
-
 ## API Endpoints
 
 | Method | Endpoint | Description |
@@ -88,38 +118,32 @@ PingPath runs entirely on a CubePath VPS. The server hosts both the Fastify API 
 | GET | `/api/status` | Public status data |
 | GET | `/api/status/badge/:id` | SVG status badge |
 | GET | `/api/incidents` | Incident history |
+| POST | `/api/incidents/:id/summarize` | Generate AI summary |
 | WS | `/ws` | Real-time events |
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | API server port | `3001` |
-| `HOST` | API server host | `0.0.0.0` |
-| `DB_PATH` | SQLite database path | `apps/api/data/pingpath.db` |
-| `PUBLIC_API_URL` | API URL for frontend | `http://localhost:3001/api` |
-| `PUBLIC_WS_URL` | WebSocket URL for frontend | `ws://localhost:3001/ws` |
 
 ## Project Structure
 
 ```
 pingpath/
 ├── apps/
-│   ├── api/          # Fastify backend
+│   ├── api/              # Fastify backend
 │   │   └── src/
-│   │       ├── cron/           # Health check scheduler
-│   │       ├── db/             # SQLite schema
-│   │       ├── notifications/  # Discord & Telegram
-│   │       ├── routes/         # REST API
-│   │       └── ws/             # WebSocket broadcaster
-│   └── web/          # Astro frontend
+│   │       ├── ai/              # Ollama AI summarizer
+│   │       ├── cron/            # Health check scheduler
+│   │       ├── db/              # SQLite schema
+│   │       ├── notifications/   # Discord & Telegram
+│   │       ├── routes/          # REST API
+│   │       └── ws/              # WebSocket broadcaster
+│   ├── demo-services/    # Mock services + chaos engine
+│   └── web/              # Astro frontend
 │       └── src/
-│           ├── components/     # React components
-│           ├── hooks/          # Custom hooks (useWebSocket)
-│           ├── layouts/        # Astro layouts
-│           ├── lib/            # API client
-│           └── pages/          # Astro pages
-├── docs/             # Project documentation
+│           ├── components/      # React components
+│           ├── hooks/           # Custom hooks (useWebSocket)
+│           ├── layouts/         # Astro layouts (App + Public)
+│           ├── lib/             # API client
+│           └── pages/           # Astro pages
+├── docs/                 # Project documentation
+├── screenshots/          # App screenshots
 └── README.md
 ```
 
