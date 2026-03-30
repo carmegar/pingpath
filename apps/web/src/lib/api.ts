@@ -112,6 +112,8 @@ export const api = {
       request<void>(`/notifications/channels/${id}`, { method: 'DELETE' }),
     testChannel: (id: string) =>
       request<void>(`/notifications/test/${id}`, { method: 'POST' }),
+    getLinked: (monitorId: string) =>
+      request<string[]>(`/monitors/${monitorId}/notifications`),
     link: (monitorId: string, channelId: string) =>
       request<void>(`/monitors/${monitorId}/notifications/${channelId}`, { method: 'POST' }),
     unlink: (monitorId: string, channelId: string) =>

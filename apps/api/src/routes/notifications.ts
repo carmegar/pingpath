@@ -60,6 +60,15 @@ export async function notificationRoutes(app: FastifyInstance) {
     return { success: true }
   })
 
+  app.get('/monitors/:monitorId/notifications', async (req) => {
+    const { monitorId } = req.params as { monitorId: string }
+    const result = await db.execute({
+      sql: 'SELECT channel_id FROM monitor_notifications WHERE monitor_id = ?',
+      args: [monitorId]
+    })
+    return result.rows.map((r: any) => r.channel_id)
+  })
+
   app.post('/notifications/test/:channelId', async (req, reply) => {
     const { channelId } = req.params as { channelId: string }
     const result = await db.execute({ sql: 'SELECT * FROM notification_channels WHERE id = ?', args: [channelId] })
@@ -69,13 +78,18 @@ export async function notificationRoutes(app: FastifyInstance) {
     const config = JSON.parse(channel.config)
     try {
       if (channel.type === 'discord') {
-        await fetch(config.webhook_url, {
+        const res = await fetch(config.webhook_url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            embeds: [{ title: 'PingPath Test Notification', description: 'Your channel is configured correctly!', color: 0x6366f1, timestamp: new Date().toISOString() }]
+            content: null,
+            embeds: [{ title: 'PingPath Test Notification', description: 'Your channel is configured correctly!', color: 0x6366f1 }]
           })
         })
+        if (!res.ok) {
+          const text = await res.text()
+          return reply.status(400).send({ error: `Discord error: ${text}` })
+        }
       } else if (channel.type === 'telegram') {
         await fetch(`https://api.telegram.org/bot${config.bot_token}/sendMessage`, {
           method: 'POST',

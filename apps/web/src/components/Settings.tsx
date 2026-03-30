@@ -216,9 +216,10 @@ function MonitorChannelLinks({ monitor, channels }: { monitor: Monitor; channels
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    // We don't have a direct endpoint to get linked channels for a monitor,
-    // so we track locally after user interactions
-    setLoaded(true)
+    api.notifications.getLinked(monitor.id).then((ids) => {
+      setLinked(new Set(ids))
+      setLoaded(true)
+    }).catch(() => setLoaded(true))
   }, [])
 
   const toggle = async (channelId: string) => {
