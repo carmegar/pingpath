@@ -28,19 +28,21 @@ Servicio de VPS donde se despliega el proyecto. Requisito del hackathon.
 | `docs/03-arquitectura.md` | Estructura, DB schema, API, flujos |
 | `docs/04-ui-design.md` | Paleta, wireframes ASCII, componentes |
 | `docs/05-contexto-sesion.md` | Este archivo - contexto rapido |
+| `docs/06-changelog.md` | Changelog interno detallado por sesion |
+| `CHANGELOG.md` | Changelog publico del proyecto |
 
 ## Estado Actual del Proyecto
 
 > Actualizar este campo al final de cada sesion de trabajo
 
 **Etapa actual:** Etapas 1, 2, 3 y 4 COMPLETADAS - Solo falta deploy (#14)
-**Ultimo trabajo realizado:** WebSocket integrado, .env configurado, README completo
+**Ultimo trabajo realizado:** Migracion de better-sqlite3 a @libsql/client por compatibilidad Windows
 **Proximo paso:** Deploy en CubePath VPS (accion manual del usuario)
 
 ## Decisiones Tecnicas Clave
 
 1. **Astro + React islas** - Astro para paginas estaticas (status page), React para partes interactivas (dashboard, graficos)
-2. **SQLite** - Simple, sin dependencias externas, suficiente para el caso de uso
+2. **SQLite via @libsql/client** - API async, sin dependencias nativas (reemplaza better-sqlite3)
 3. **Fastify** - Mas rapido que Express, buen soporte TypeScript
 4. **Monorepo con pnpm** - apps/api + apps/web en un solo repo
 5. **WebSockets** - Dashboard se actualiza en tiempo real sin polling

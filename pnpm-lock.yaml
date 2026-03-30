@@ -42,6 +42,22 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  apps/demo-services:
+    dependencies:
+      fastify:
+        specifier: ^5.2.1
+        version: 5.8.2
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.3
+
   apps/web:
     dependencies:
       '@astrojs/check':

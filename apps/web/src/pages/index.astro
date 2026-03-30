@@ -1,8 +1,8 @@
 ---
-import Layout from '../layouts/Layout.astro'
-import Dashboard from '../components/Dashboard'
+import PublicLayout from '../layouts/PublicLayout.astro'
+import Landing from '../components/Landing'
 ---
 
-<Layout title="Dashboard">
-  <Dashboard client:load />
-</Layout>
+<PublicLayout title="Uptime Monitor & Status Page">
+  <Landing client:load />
+</PublicLayout>

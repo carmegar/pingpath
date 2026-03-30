@@ -55,7 +55,8 @@ export async function initDatabase(): Promise<void> {
       type TEXT NOT NULL CHECK (type IN ('down', 'degraded', 'recovery')),
       started_at TEXT NOT NULL DEFAULT (datetime('now')),
       resolved_at TEXT,
-      duration_seconds INTEGER
+      duration_seconds INTEGER,
+      ai_summary TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_incidents_monitor_id ON incidents(monitor_id);

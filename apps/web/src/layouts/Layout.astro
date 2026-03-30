@@ -19,8 +19,21 @@ const { title } = Astro.props
   </head>
   <body class="min-h-screen bg-bg text-text-primary">
     <div class="flex min-h-screen">
+      <!-- Mobile Header -->
+      <div class="md:hidden fixed top-0 left-0 right-0 z-40 bg-surface border-b border-border px-4 py-3 flex items-center justify-between">
+        <a href="/app" class="flex items-center gap-2 text-lg font-bold">
+          <span class="w-3 h-3 rounded-full bg-success animate-pulse-dot"></span>
+          PingPath
+        </a>
+        <button id="menu-toggle" class="p-2 rounded-lg hover:bg-surface-hover transition-colors" aria-label="Toggle menu">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+
       <!-- Sidebar -->
-      <aside class="w-64 border-r border-border bg-surface flex flex-col shrink-0">
+      <aside id="sidebar" class="hidden md:flex w-64 border-r border-border bg-surface flex-col shrink-0 fixed md:sticky top-0 h-screen z-50">
         <div class="p-5 border-b border-border">
           <a href="/" class="flex items-center gap-2 text-lg font-bold">
             <span class="w-3 h-3 rounded-full bg-success animate-pulse-dot"></span>
@@ -30,7 +43,7 @@ const { title } = Astro.props
         <nav class="flex-1 p-3">
           <ul class="space-y-1">
             <li>
-              <a href="/" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-surface-hover transition-colors">
+              <a href="/app" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-surface-hover transition-colors">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" />
                 </svg>
@@ -69,11 +82,39 @@ const { title } = Astro.props
         </div>
       </aside>
 
+      <!-- Overlay for mobile sidebar -->
+      <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/50 z-40 md:hidden"></div>
+
       <!-- Main content -->
-      <main class="flex-1 overflow-auto">
+      <main class="flex-1 overflow-auto pt-14 md:pt-0">
         <slot />
       </main>
     </div>
+
+    <script is:inline>
+      const toggle = document.getElementById('menu-toggle')
+      const sidebar = document.getElementById('sidebar')
+      const overlay = document.getElementById('sidebar-overlay')
+
+      function openMenu() {
+        sidebar.classList.remove('hidden')
+        sidebar.classList.add('flex')
+        overlay.classList.remove('hidden')
+      }
+
+      function closeMenu() {
+        sidebar.classList.add('hidden')
+        sidebar.classList.remove('flex')
+        overlay.classList.add('hidden')
+      }
+
+      toggle?.addEventListener('click', () => {
+        if (sidebar.classList.contains('hidden')) openMenu()
+        else closeMenu()
+      })
+
+      overlay?.addEventListener('click', closeMenu)
+    </script>
   </body>
 </html>
 

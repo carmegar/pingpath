@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* Dark theme (default) */
 @theme {
   --color-bg: #0a0a0b;
   --color-surface: #141416;
@@ -18,6 +19,21 @@ body {
   background-color: var(--color-bg);
   color: var(--color-text-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Light theme override */
+html.light {
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-accent: #6366f1;
+  --color-accent-hover: #4f46e5;
+  --color-success: #16a34a;
+  --color-error: #dc2626;
+  --color-warning: #d97706;
 }
 
 /* Pulse animation for status dots */

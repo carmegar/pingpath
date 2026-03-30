@@ -3,6 +3,7 @@ import { getDb } from '../db/schema.js'
 import { nanoid } from 'nanoid'
 import { sendNotification } from '../notifications/sender.js'
 import { broadcast } from '../ws/broadcaster.js'
+import { generateIncidentSummary } from '../ai/summarizer.js'
 
 interface Monitor {
   id: string
@@ -78,6 +79,14 @@ async function handleStateChange(monitor: Monitor, previousStatus: string | null
         sql: `UPDATE incidents SET resolved_at = datetime('now'), duration_seconds = CAST((julianday('now') - julianday(started_at)) * 86400 AS INTEGER) WHERE id = ?`,
         args: [inc.id]
       })
+
+      // Generate AI summary asynchronously (don't block the check cycle)
+      generateIncidentSummary(inc.id).then((summary) => {
+        if (summary) {
+          console.log(`AI Summary for ${monitor.name}: ${summary}`)
+          broadcast('incident_summary', { incident_id: inc.id, monitor_name: monitor.name, summary })
+        }
+      }).catch(console.error)
     }
 
     console.log(`RECOVERED: ${monitor.name} is back up`)

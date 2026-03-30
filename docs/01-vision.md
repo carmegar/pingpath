@@ -32,10 +32,10 @@ PingPath es un servicio de monitoreo de uptime con status page publica que corre
 | Frontend | Astro + React (islas interactivas) |
 | Styling | Tailwind CSS v4 |
 | Graficos | Recharts |
-| Backend API | Node.js + Express (o Fastify) |
-| Base de datos | SQLite (con better-sqlite3) |
+| Backend API | Node.js + Fastify |
+| Base de datos | SQLite (con @libsql/client) |
 | Cron jobs | node-cron |
-| Tiempo real | WebSockets (ws) |
+| Tiempo real | WebSockets (@fastify/websocket) |
 | Notificaciones | Discord Webhooks, Telegram Bot API |
 | Deploy | CubePath VPS |
 

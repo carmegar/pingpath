@@ -59,6 +59,7 @@ export interface Incident {
   started_at: string
   resolved_at: string | null
   duration_seconds: number | null
+  ai_summary?: string | null
 }
 
 export interface StatusData {
@@ -78,6 +79,14 @@ export interface MonitorInput {
   is_active?: boolean
 }
 
+export interface NotificationChannel {
+  id: string
+  type: 'discord' | 'telegram'
+  config: Record<string, string>
+  is_active: number
+  created_at: string
+}
+
 export const api = {
   monitors: {
     list: () => request<Monitor[]>('/monitors'),
@@ -94,5 +103,18 @@ export const api = {
   },
   status: {
     get: () => request<StatusData>('/status'),
+  },
+  notifications: {
+    channels: () => request<NotificationChannel[]>('/notifications/channels'),
+    createChannel: (data: { type: string; config: Record<string, string> }) =>
+      request<NotificationChannel>('/notifications/channels', { method: 'POST', body: JSON.stringify(data) }),
+    deleteChannel: (id: string) =>
+      request<void>(`/notifications/channels/${id}`, { method: 'DELETE' }),
+    testChannel: (id: string) =>
+      request<void>(`/notifications/test/${id}`, { method: 'POST' }),
+    link: (monitorId: string, channelId: string) =>
+      request<void>(`/monitors/${monitorId}/notifications/${channelId}`, { method: 'POST' }),
+    unlink: (monitorId: string, channelId: string) =>
+      request<void>(`/monitors/${monitorId}/notifications/${channelId}`, { method: 'DELETE' }),
   },
 }

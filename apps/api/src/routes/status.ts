@@ -19,7 +19,7 @@ export async function statusRoutes(app: FastifyInstance) {
         const daily = await db.execute({
           sql: `SELECT date(checked_at) as day,
             ROUND(SUM(CASE WHEN status = 'up' THEN 1.0 ELSE 0.0 END) / COUNT(*) * 100, 2) as uptime
-          FROM checks WHERE monitor_id = ? AND checked_at > datetime('now', '-30 days')
+          FROM checks WHERE monitor_id = ? AND checked_at > datetime('now', '-90 days')
           GROUP BY date(checked_at) ORDER BY day ASC`,
           args: [m.id]
         })
@@ -30,7 +30,8 @@ export async function statusRoutes(app: FastifyInstance) {
     const incidents = await db.execute(`
       SELECT i.*, m.name as monitor_name FROM incidents i
       JOIN monitors m ON m.id = i.monitor_id
-      WHERE m.is_public = 1 ORDER BY i.started_at DESC LIMIT 20
+      WHERE m.is_public = 1 AND i.started_at > datetime('now', '-90 days')
+      ORDER BY i.started_at DESC LIMIT 50
     `)
 
     const hasDown = monitorsResult.rows.some((m: any) => m.current_status === 'down')

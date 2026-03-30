@@ -134,3 +134,112 @@ Etapa 3-4: WebSockets para tiempo real, badges SVG, notificaciones. Luego deploy
 
 #### Proximo paso
 Tarea #14: Deploy en CubePath VPS (requiere accion manual del usuario).
+
+---
+
+## Sesion 4 - 20 marzo 2026
+
+### Fix critico: Migracion de better-sqlite3 a @libsql/client
+
+#### Problema
+`better-sqlite3` requiere compilacion nativa de C++ (node-gyp). En Windows sin Visual Studio Build Tools, los bindings no se generan y el servidor no arranca.
+
+#### Solucion
+Migracion completa a `@libsql/client` (Turso):
+- API async (`db.execute()` en vez de `db.prepare().all()`)
+- Sin dependencias nativas, funciona en cualquier plataforma
+- Compatible con SQLite local via `file:` protocol
+
+#### Archivos modificados
+- `apps/api/package.json` - Reemplazado better-sqlite3 por @libsql/client
+- `apps/api/src/db/schema.ts` - Nuevo cliente libsql, initDatabase async, executeMultiple para schema
+- `apps/api/src/index.ts` - `await initDatabase()` (ahora async)
+- `apps/api/src/routes/monitors.ts` - Todas las queries migradas a db.execute() async
+- `apps/api/src/routes/incidents.ts` - Migrado a async
+- `apps/api/src/routes/status.ts` - Migrado a async
+- `apps/api/src/routes/notifications.ts` - Migrado a async
+- `apps/api/src/cron/checker.ts` - Migrado a async, query de previous status simplificada con OFFSET
+- `apps/api/src/notifications/sender.ts` - Migrado a async
+
+#### Verificacion
+- API arranca correctamente en localhost:3001
+- Health check responde `{"status":"ok"}`
+- CRUD de monitores funcional (crear, listar)
+- Frontend build OK (4 paginas, astro build)
+- TypeScript compila sin errores
+
+#### Commits
+- `c7acb6f` - feat: initial PingPath implementation
+- `70e2275` - fix: migrate from better-sqlite3 to @libsql/client
+
+---
+
+## Sesion 5 - 20 marzo 2026
+
+### Etapas 3-5: Status Page, IA, Demo Services, Landing
+
+#### Tareas completadas
+
+**Etapa 3: Status Page Publica**
+- [x] PublicLayout sin sidebar para paginas publicas
+- [x] StatusPage rediseñada: banner, monitors con UptimeBar 90 dias, timeline de incidentes por fecha
+- [x] UptimeBar component: barras de disponibilidad 90 dias con tooltip y hover effects
+- [x] Tema claro/oscuro con ThemeToggle y persistencia en localStorage
+- [x] API actualizada: incidentes 90 dias, daily uptime 90 dias
+
+**Etapa 4: Notificaciones + IA**
+- [x] Settings page: CRUD canales Discord/Telegram, test de canal, vinculacion monitor-canal
+- [x] Servicio IA: apps/api/src/ai/summarizer.ts (Ollama Qwen2 0.5B)
+- [x] Generacion automatica de resumen al resolverse incidentes (async)
+- [x] Campo ai_summary en tabla incidents
+- [x] Resumen IA visible en timeline de incidentes y status page
+- [x] Endpoint POST /api/incidents/:id/summarize
+- [x] Broadcast incident_summary via WebSocket
+
+**Etapa 5: Demo Services + Landing**
+- [x] App demo-services: 3 servicios mock (API, Web, Slow API)
+- [x] Chaos engine: tumba/degrada servicios cada 10-20 min aleatoriamente
+- [x] Landing page con features, highlight IA, tech stack
+- [x] Reestructurado: landing en /, dashboard en /app
+- [x] Layout responsive con hamburger menu en mobile
+
+#### Archivos creados
+
+**Backend**
+- `apps/api/src/ai/summarizer.ts` - Integracion Ollama: construye prompt con contexto del incidente, genera resumen 2-3 oraciones
+
+**Frontend**
+- `apps/web/src/layouts/PublicLayout.astro` - Layout publico sin sidebar
+- `apps/web/src/components/UptimeBar.tsx` - Barras disponibilidad 90 dias
+- `apps/web/src/components/Settings.tsx` - Pagina de configuracion de notificaciones
+- `apps/web/src/components/Landing.tsx` - Landing page del proyecto
+- `apps/web/src/pages/app.astro` - Dashboard (antes era index)
+- `apps/web/src/pages/settings.astro` - Pagina settings
+
+**Demo Services**
+- `apps/demo-services/package.json` - Package del workspace
+- `apps/demo-services/tsconfig.json` - Config TypeScript
+- `apps/demo-services/src/index.ts` - 3 servicios mock + chaos engine
+
+**Documentacion**
+- `docs/07-deploy.md` - Guia completa de deploy en 2 VPS
+
+#### Archivos modificados
+- `apps/api/src/db/schema.ts` - Campo ai_summary en incidents
+- `apps/api/src/cron/checker.ts` - Integracion generateIncidentSummary al resolver incidentes
+- `apps/api/src/routes/incidents.ts` - Endpoint /incidents/:id/summarize
+- `apps/api/src/routes/status.ts` - Incidentes 90 dias, daily uptime 90 dias
+- `apps/web/src/lib/api.ts` - Tipos NotificationChannel, Incident.ai_summary, api.notifications
+- `apps/web/src/styles/global.css` - Soporte tema claro con html.light
+- `apps/web/src/layouts/Layout.astro` - Responsive sidebar + mobile hamburger
+- `apps/web/src/components/StatusPage.tsx` - Rediseño completo con timeline e IA
+- `apps/web/src/components/MonitorDetail.tsx` - Responsive header
+- `apps/web/src/pages/index.astro` - Ahora muestra Landing
+- `apps/web/src/pages/status.astro` - Usa PublicLayout
+- `docs/02-plan-etapas.md` - Actualizado con 2 VPS e IA
+- `docs/03-arquitectura.md` - Arquitectura 2 VPS, IA, demo services, rutas
+
+#### Estado de compilacion
+- API: `tsc` OK (0 errores)
+- Web: `astro build` OK (6 paginas: /, /app, /status, /monitor, /incidents, /settings)
+- Demo services: pendiente install (no critico)

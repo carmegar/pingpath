@@ -112,6 +112,7 @@ export default function Dashboard() {
               monitor={m}
               latencyHistory={checksMap[m.id] || []}
               onClick={() => window.location.href = `/monitor?id=${m.id}`}
+
             />
           ))}
         </div>
