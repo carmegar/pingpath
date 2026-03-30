@@ -116,10 +116,17 @@ export default function StatusPage() {
       <header className="border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-accent animate-pulse-dot" />
-            <span className="font-bold text-lg">PingPath</span>
+            <a href="/" className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-accent animate-pulse-dot" />
+              <span className="font-bold text-lg">PingPath</span>
+            </a>
           </div>
-          <ThemeToggle />
+          <nav className="flex items-center gap-3">
+            <a href="/app" className="text-sm text-text-secondary hover:text-text-primary transition-colors">Dashboard</a>
+            <a href="/incidents" className="text-sm text-text-secondary hover:text-text-primary transition-colors">Incidents</a>
+            <a href="/settings" className="text-sm text-text-secondary hover:text-text-primary transition-colors">Settings</a>
+            <ThemeToggle />
+          </nav>
         </div>
       </header>
 
