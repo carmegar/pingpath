@@ -73,16 +73,16 @@
 - [x] Landing page atractiva con features y highlight de IA
 - [x] Reestructurar rutas: landing en /, dashboard en /app
 
-#### Deploy pendiente
-- [ ] Deploy PingPath (API + Web) en VPS 1
-- [ ] Instalar Ollama + descargar Qwen2 0.5B en VPS 1
-- [ ] Deploy demo-services en VPS 2
-- [ ] Configurar monitores apuntando a servicios del VPS 2
-- [ ] Configurar dominio/subdominio si es posible
-- [ ] README.md final (descripcion, screenshots, instrucciones)
-- [ ] Capturas de pantalla y GIF del proyecto
-- [ ] Pruebas finales end-to-end
-- [ ] Subir issue al repo del hackathon
+#### Deploy completado ✅
+- [x] Deploy PingPath (API + Web + Nginx) en VPS 1
+- [x] Instalar Ollama + descargar Qwen2 0.5B en VPS 1
+- [x] Deploy demo-services en VPS 2
+- [x] Configurar monitores apuntando a servicios del VPS 2
+- [x] Configurar notificaciones Discord
+- [x] README.md final (descripcion, screenshots, instrucciones)
+- [x] Capturas de pantalla del proyecto
+- [x] Pruebas finales end-to-end
+- [x] Subir issue #123 al repo del hackathon
 
 ---
 

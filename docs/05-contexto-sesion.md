@@ -35,9 +35,9 @@ Servicio de VPS donde se despliega el proyecto. Requisito del hackathon.
 
 > Actualizar este campo al final de cada sesion de trabajo
 
-**Etapa actual:** Etapas 1, 2, 3 y 4 COMPLETADAS - Solo falta deploy (#14)
-**Ultimo trabajo realizado:** Migracion de better-sqlite3 a @libsql/client por compatibilidad Windows
-**Proximo paso:** Deploy en CubePath VPS (accion manual del usuario)
+**Etapa actual:** TODAS LAS ETAPAS COMPLETADAS - Proyecto desplegado y funcional
+**Ultimo trabajo realizado:** Deploy completo en 2 VPS CubePath, Discord notifications, Ollama IA
+**Estado:** Proyecto finalizado y entregado para el hackathon
 
 ## Decisiones Tecnicas Clave
 

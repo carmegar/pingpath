@@ -26,6 +26,9 @@ Built for the [CubePath Hackathon 2026](https://github.com/midudev/hackaton-cube
 ![Status Page Dark](screenshots/status_dark.png)
 ![Status Page Light](screenshots/status_light.png)
 
+### Discord Notifications
+![Discord Notification](screenshots/ping_discord.png)
+
 ## Features
 
 - **Real-time monitoring** - HTTP/HTTPS health checks every 60 seconds
